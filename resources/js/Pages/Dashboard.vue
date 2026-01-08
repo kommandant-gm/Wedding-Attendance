@@ -1,5 +1,9 @@
 <script setup>
-import { Link, Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Link, Head, usePage } from '@inertiajs/vue3';
+
+const page = usePage();
+const isAdmin = computed(() => page.props.auth?.user?.username === 'amir');
 </script>
 
 <template>
@@ -127,6 +131,28 @@ import { Link, Head } from '@inertiajs/vue3';
                         <p class="text-sm text-gray-400 mb-6">Open the guest scanning interface for the reception team.</p>
                         <span class="text-xs font-bold text-yellow-400 uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
                             Launch Scanner <span class="text-lg leading-none">&rarr;</span>
+                        </span>
+                    </div>
+                </Link>
+
+                <!-- Settings (Admin only) -->
+                <Link v-if="isAdmin" href="/settings" class="group relative overflow-hidden rounded-3xl bg-gray-900/40 border border-white/10 p-8 hover:bg-gray-800/40 transition-all duration-500 hover:border-rose-500/30 hover:shadow-[0_0_30px_rgba(244,63,94,0.15)]">
+                    <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h3m-3 12h3m-6.364-9.364l2.122-2.122m5.486 5.486l2.122-2.122m-9.9 9.9l2.122-2.122m5.486 5.486l2.122-2.122M12 9a3 3 0 100 6 3 3 0 000-6z" />
+                        </svg>
+                    </div>
+
+                    <div class="relative z-10">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center mb-6 text-rose-400 group-hover:scale-110 transition-transform duration-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h3m-3 12h3m-6.364-9.364l2.122-2.122m5.486 5.486l2.122-2.122m-9.9 9.9l2.122-2.122m5.486 5.486l2.122-2.122M12 9a3 3 0 100 6 3 3 0 000-6z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Settings</h3>
+                        <p class="text-sm text-gray-400 mb-6">Admin-only tools for testing and system maintenance.</p>
+                        <span class="text-xs font-bold text-rose-400 uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
+                            Open Settings <span class="text-lg leading-none">&rarr;</span>
                         </span>
                     </div>
                 </Link>

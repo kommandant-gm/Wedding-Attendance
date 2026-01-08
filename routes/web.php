@@ -1,8 +1,10 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\GuestImportController;
+use App\Models\Attendance;
 use App\Models\Guest;
 use App\Services\QRTokenService;
 
@@ -13,16 +15,16 @@ Route::get('/login', function () {
 Route::post('/login', function () {
     // Simple login logic
     request()->validate([
-        'email' => 'required|email',
+        'username' => 'required|string',
         'password' => 'required',
     ]);
     
-    if (Auth::attempt(request()->only('email', 'password'))) {
+    if (Auth::attempt(request()->only('username', 'password'), request()->boolean('remember'))) {
         request()->session()->regenerate();
         return redirect('/dashboard');
     }
     
-    return back()->withErrors(['email' => 'Invalid credentials']);
+    return back()->withErrors(['username' => 'Invalid credentials']);
 });
 
 Route::middleware('auth')->group(function () {
@@ -55,6 +57,30 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', function () {
         return Inertia::render('Reports');
     });
+
+    Route::get('/settings', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        return Inertia::render('Settings', [
+            'checkedInCount' => Attendance::count(),
+            'resetResult' => $request->session()->get('attendance_reset'),
+        ]);
+    })->name('settings');
+
+    Route::post('/settings/attendance/reset', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        $cleared = Attendance::count();
+        Attendance::query()->delete();
+
+        return back()->with('attendance_reset', [
+            'cleared' => $cleared,
+        ]);
+    })->name('settings.attendance.reset');
     
     Route::post('/logout', function () {
         Auth::logout();
@@ -65,8 +91,6 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return redirect('/login');
 });
-
-
 
 
 

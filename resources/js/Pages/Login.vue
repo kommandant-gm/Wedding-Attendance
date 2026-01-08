@@ -2,7 +2,7 @@
 import { Head, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
-    email: '',
+    username: '',
     password: '',
     remember: false,
 });
@@ -44,7 +44,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-5">
                     <div class="form-control">
                         <label class="label pl-1">
-                            <span class="label-text text-gray-300 text-xs uppercase tracking-wider font-semibold">Email Address</span>
+                            <span class="label-text text-gray-300 text-xs uppercase tracking-wider font-semibold">Username</span>
                         </label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -53,14 +53,15 @@ const submit = () => {
                                 </svg>
                             </div>
                             <input 
-                                type="email" 
-                                v-model="form.email"
+                                type="text" 
+                                v-model="form.username"
                                 required
                                 class="input input-bordered w-full bg-black/20 border-gray-700 text-white pl-10 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-300 placeholder-gray-600" 
-                                placeholder="admin@example.com" 
+                                placeholder="planner" 
+                                autocomplete="username"
                             />
                         </div>
-                        <div v-if="form.errors.email" class="text-error text-xs mt-1 pl-1">{{ form.errors.email }}</div>
+                        <div v-if="form.errors.username" class="text-error text-xs mt-1 pl-1">{{ form.errors.username }}</div>
                     </div>
 
                     <div class="form-control">
@@ -78,7 +79,8 @@ const submit = () => {
                                 v-model="form.password"
                                 required
                                 class="input input-bordered w-full bg-black/20 border-gray-700 text-white pl-10 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-300 placeholder-gray-600" 
-                                placeholder="••••••••" 
+                                placeholder="********"
+                                autocomplete="current-password"
                             />
                         </div>
                         <div v-if="form.errors.password" class="text-error text-xs mt-1 pl-1">{{ form.errors.password }}</div>
