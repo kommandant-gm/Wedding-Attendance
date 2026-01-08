@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('guests', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('phone')->nullable();
-            $table->string('table_name')->nullable();
-            $table->string('hall')->nullable();
-            $table->timestamps();
-            $table->index(['name']);
-            $table->index(['phone']);
-        });
+        if (!Schema::hasTable('guests')) {
+            Schema::create('guests', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('phone')->nullable();
+                $table->string('table_name')->nullable();
+                $table->string('hall')->nullable();
+                $table->timestamps();
+                $table->index(['name']);
+                $table->index(['phone']);
+            });
+        }
     }
 
     public function down(): void

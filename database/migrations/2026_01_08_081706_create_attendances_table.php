@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attendances', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('guest_id')->constrained()->onDelete('cascade');
-            $table->timestamp('checked_in_at');
-            $table->string('checked_in_by')->nullable();
-            $table->ipAddress('ip_address')->nullable();
-            $table->index(['guest_id', 'checked_in_at']);
-        });
+        if (!Schema::hasTable('attendances')) {
+            Schema::create('attendances', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('guest_id')->constrained()->onDelete('cascade');
+                $table->timestamp('checked_in_at');
+                $table->string('checked_in_by')->nullable();
+                $table->ipAddress('ip_address')->nullable();
+                $table->index(['guest_id', 'checked_in_at']);
+            });
+        }
     }
 
     /**
