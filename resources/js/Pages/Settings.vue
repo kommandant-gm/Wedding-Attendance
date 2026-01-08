@@ -26,6 +26,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    attendanceTestResult: {
+        type: Object,
+        default: null,
+    },
     scanLogs: {
         type: Array,
         default: () => [],
@@ -77,6 +81,16 @@ const testToken = () => {
 
 const generateTokenTest = () => {
     generateTestForm.post('/settings/qr/test', {
+        preserveScroll: true,
+    });
+};
+
+const attendanceTestForm = useForm({
+    token: '',
+});
+
+const runAttendanceTest = () => {
+    attendanceTestForm.post('/settings/attendance/test', {
         preserveScroll: true,
     });
 };
@@ -325,6 +339,60 @@ const statusBadgeClass = (value) => {
                         <div v-if="props.qrTestResult.token" class="mt-4 text-xs text-gray-300">
                             <div class="mb-2 text-gray-400">Token:</div>
                             <pre class="whitespace-pre-wrap break-all rounded-xl bg-gray-950/70 border border-white/10 p-3 text-xs text-gray-200">{{ props.qrTestResult.token }}</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
+                    <div>
+                        <h3 class="text-xl font-semibold text-white">Check-in Dry Run</h3>
+                        <p class="text-sm text-gray-400 mt-2">Run a full check-in flow using a token, without saving the attendance record.</p>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-white/10 bg-gray-900/60 p-4">
+                        <textarea
+                            v-model="attendanceTestForm.token"
+                            rows="4"
+                            class="w-full rounded-xl bg-gray-950/70 border border-white/10 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            placeholder="Paste token here"
+                        ></textarea>
+                        <button
+                            type="button"
+                            @click="runAttendanceTest"
+                            :disabled="attendanceTestForm.processing || !attendanceTestForm.token"
+                            class="mt-3 btn btn-sm bg-emerald-500 hover:bg-emerald-400 text-black border-none shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+                        >
+                            <span v-if="attendanceTestForm.processing" class="loading loading-spinner loading-sm"></span>
+                            <span v-else>Run Dry Run</span>
+                        </button>
+                    </div>
+
+                    <div v-if="props.attendanceTestResult" class="mt-6 rounded-2xl border border-white/10 bg-gray-900/60 p-4 text-sm text-gray-200">
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="inline-flex items-center rounded-full px-2 py-1 text-xs uppercase tracking-wider"
+                                :class="props.attendanceTestResult.ok ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-200 border border-rose-500/30'"
+                            >
+                                {{ props.attendanceTestResult.ok ? 'ok' : 'failed' }}
+                            </span>
+                            <span class="text-xs text-gray-400">Mode: {{ props.attendanceTestResult.mode || '--' }}</span>
+                        </div>
+
+                        <div v-if="!props.attendanceTestResult.ok" class="mt-3 text-rose-200">
+                            Error: {{ props.attendanceTestResult.error }}
+                        </div>
+
+                        <div v-if="props.attendanceTestResult.guest" class="mt-4 text-xs text-gray-300">
+                            <div>Guest ID: {{ props.attendanceTestResult.guest.id }}</div>
+                            <div>Name: {{ props.attendanceTestResult.guest.name }}</div>
+                            <div>Table: {{ props.attendanceTestResult.guest.table || '--' }}</div>
+                            <div>Hall: {{ props.attendanceTestResult.guest.hall || '--' }}</div>
+                            <div>Checked In (dry run): {{ props.attendanceTestResult.guest.checked_in_at ? formatDateTime(props.attendanceTestResult.guest.checked_in_at) : '--' }}</div>
+                        </div>
+
+                        <div v-if="props.attendanceTestResult.token" class="mt-4 text-xs text-gray-300">
+                            <div class="mb-2 text-gray-400">Token:</div>
+                            <pre class="whitespace-pre-wrap break-all rounded-xl bg-gray-950/70 border border-white/10 p-3 text-xs text-gray-200">{{ props.attendanceTestResult.token }}</pre>
                         </div>
                     </div>
                 </div>

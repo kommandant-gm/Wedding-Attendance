@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use App\Http\Controllers\GuestImportController;
 use App\Models\Attendance;
@@ -72,6 +73,7 @@ Route::middleware('auth')->group(function () {
             'qrResetResult' => $request->session()->get('qr_regenerated'),
             'diagnosticsResult' => $request->session()->get('diagnostics_result'),
             'qrTestResult' => $request->session()->get('qr_test_result'),
+            'attendanceTestResult' => $request->session()->get('attendance_test_result'),
             'scanLogs' => ScanLog::query()
                 ->with('guest:id,name,table_name,hall')
                 ->latest()
@@ -190,6 +192,61 @@ Route::middleware('auth')->group(function () {
             'error' => 'Provide a token or guest ID to test.',
         ]);
     })->name('settings.qr.test');
+
+    Route::post('/settings/attendance/test', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        $token = trim($validated['token']);
+        $qrTokenService = app(QRTokenService::class);
+        $transactionStarted = false;
+
+        try {
+            $guestId = $qrTokenService->validateToken($token);
+            $guest = Guest::with('attendance')->findOrFail($guestId);
+
+            DB::beginTransaction();
+            $transactionStarted = true;
+
+            $attendance = Attendance::create([
+                'guest_id' => $guest->id,
+                'checked_in_at' => now(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            DB::rollBack();
+            $transactionStarted = false;
+
+            return back()->with('attendance_test_result', [
+                'ok' => true,
+                'mode' => 'dry_run',
+                'token' => $token,
+                'guest' => [
+                    'id' => $guest->id,
+                    'name' => $guest->name,
+                    'table' => $guest->table_name,
+                    'hall' => $guest->hall,
+                    'checked_in_at' => $attendance->checked_in_at,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            if ($transactionStarted) {
+                DB::rollBack();
+            }
+
+            return back()->with('attendance_test_result', [
+                'ok' => false,
+                'mode' => 'dry_run',
+                'token' => $token,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    })->name('settings.attendance.test');
 
     Route::post('/settings/diagnostics', function (Request $request) {
         if (! $request->user() || $request->user()->username !== 'amir') {
