@@ -16,6 +16,29 @@ const alreadyCheckedIn = ref(false);
 // Audio for success beep
 const successAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+const getModal = () => document.getElementById('guest_modal');
+
+const openModal = () => {
+    const modal = getModal();
+    if (!modal) return;
+    if (typeof modal.showModal === 'function') {
+        if (!modal.open) modal.showModal();
+    } else {
+        modal.setAttribute('open', '');
+    }
+};
+
+const closeModal = () => {
+    const modal = getModal();
+    if (!modal) return;
+    if (typeof modal.close === 'function') {
+        if (modal.open) modal.close();
+    } else {
+        modal.removeAttribute('open');
+    }
+    document.body.classList.remove('modal-open');
+};
+
 const onScanSuccess = async (decodedText, decodedResult) => {
     if (loading.value || !scanning.value) return;
 
@@ -42,7 +65,7 @@ const onScanSuccess = async (decodedText, decodedResult) => {
         alreadyCheckedIn.value = false;
 
         // Open the modal
-        document.getElementById('guest_modal').showModal();
+        openModal();
 
     } catch (error) {
         console.error(error);
@@ -51,7 +74,7 @@ const onScanSuccess = async (decodedText, decodedResult) => {
             // Already checked in
             guest.value = error.response.data.guest;
             alreadyCheckedIn.value = true;
-            document.getElementById('guest_modal').showModal();
+            openModal();
         } else {
             errorMsg.value = error.response?.data?.error || "Invalid QR Code or Guest not found.";
             scanning.value = true;
@@ -72,11 +95,16 @@ const formatDateTime = (value) => {
 };
 
 const resetScanner = () => {
+    closeModal();
     guest.value = null;
     errorMsg.value = '';
     scanning.value = true;
     if (scanner.value) {
-        scanner.value.resume();
+        setTimeout(() => {
+            if (scanner.value) {
+                scanner.value.resume();
+            }
+        }, 120);
     }
 };
 
