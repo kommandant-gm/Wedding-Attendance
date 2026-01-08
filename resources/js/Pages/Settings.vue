@@ -6,19 +6,37 @@ const props = defineProps({
         type: Number,
         default: 0,
     },
+    guestCount: {
+        type: Number,
+        default: 0,
+    },
     resetResult: {
+        type: Object,
+        default: null,
+    },
+    qrResetResult: {
         type: Object,
         default: null,
     },
 });
 
 const resetForm = useForm({});
+const qrForm = useForm({});
 
 const resetAttendance = () => {
     const confirmed = window.confirm('This will clear all attendance check-ins. Continue?');
     if (!confirmed) return;
 
     resetForm.post('/settings/attendance/reset', {
+        preserveScroll: true,
+    });
+};
+
+const regenerateQRCodes = () => {
+    const confirmed = window.confirm('This will regenerate all QR codes. Old codes will stop working. Continue?');
+    if (!confirmed) return;
+
+    qrForm.post('/settings/qr/regenerate', {
         preserveScroll: true,
     });
 };
@@ -70,6 +88,9 @@ const resetAttendance = () => {
                 <div v-if="props.resetResult" class="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
                     Attendance reset complete. Cleared {{ props.resetResult.cleared }} records.
                 </div>
+                <div v-if="props.qrResetResult" class="mt-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-200">
+                    QR codes regenerated for {{ props.qrResetResult.updated }} guests.
+                </div>
 
                 <div class="mt-8 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -89,6 +110,29 @@ const resetAttendance = () => {
                             >
                                 <span v-if="resetForm.processing" class="loading loading-spinner loading-sm"></span>
                                 <span v-else>Reset Attendance</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white">Regenerate QR Codes</h3>
+                            <p class="text-sm text-gray-400 mt-2">Invalidate existing codes and create new ones for all guests.</p>
+                            <div class="mt-4 inline-flex items-center gap-2 rounded-full bg-gray-800/60 px-3 py-1 text-xs text-gray-300">
+                                Guests: <span class="text-white font-semibold">{{ props.guestCount }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="button"
+                                @click="regenerateQRCodes"
+                                :disabled="qrForm.processing || props.guestCount === 0"
+                                class="btn bg-blue-600 hover:bg-blue-500 text-white border-none shadow-lg shadow-blue-900/20 disabled:opacity-50"
+                            >
+                                <span v-if="qrForm.processing" class="loading loading-spinner loading-sm"></span>
+                                <span v-else>Regenerate QR Codes</span>
                             </button>
                         </div>
                     </div>

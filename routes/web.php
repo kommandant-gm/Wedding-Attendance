@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\GuestImportController;
@@ -65,7 +66,9 @@ Route::middleware('auth')->group(function () {
 
         return Inertia::render('Settings', [
             'checkedInCount' => Attendance::count(),
+            'guestCount' => Guest::count(),
             'resetResult' => $request->session()->get('attendance_reset'),
+            'qrResetResult' => $request->session()->get('qr_regenerated'),
         ]);
     })->name('settings');
 
@@ -81,6 +84,24 @@ Route::middleware('auth')->group(function () {
             'cleared' => $cleared,
         ]);
     })->name('settings.attendance.reset');
+
+    Route::post('/settings/qr/regenerate', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        $updated = 0;
+        Guest::query()->orderBy('id')->chunk(200, function ($guests) use (&$updated) {
+            foreach ($guests as $guest) {
+                $guest->forceFill(['qr_secret' => Str::random(32)])->save();
+                $updated++;
+            }
+        });
+
+        return back()->with('qr_regenerated', [
+            'updated' => $updated,
+        ]);
+    })->name('settings.qr.regenerate');
     
     Route::post('/logout', function () {
         Auth::logout();
@@ -91,6 +112,5 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return redirect('/login');
 });
-
 
 

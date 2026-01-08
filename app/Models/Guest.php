@@ -11,6 +11,7 @@ class Guest extends Model
         'phone',
         'table_name',
         'hall',
+        'qr_secret',
     ];
 
     public function attendance()

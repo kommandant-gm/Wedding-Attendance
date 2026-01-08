@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Guest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class GuestImportController extends Controller
@@ -85,6 +86,7 @@ class GuestImportController extends Controller
                     'phone' => $phone,
                     'table_name' => $table,
                     'hall' => $hall,
+                    'qr_secret' => Str::random(32),
                 ]);
                 $imported++;
             }
