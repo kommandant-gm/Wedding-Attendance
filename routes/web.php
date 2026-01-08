@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\GuestImportController;
 use App\Models\Attendance;
 use App\Models\Guest;
+use App\Models\ScanLog;
 use App\Services\QRTokenService;
 
 Route::get('/login', function () {
@@ -69,6 +70,11 @@ Route::middleware('auth')->group(function () {
             'guestCount' => Guest::count(),
             'resetResult' => $request->session()->get('attendance_reset'),
             'qrResetResult' => $request->session()->get('qr_regenerated'),
+            'scanLogs' => ScanLog::query()
+                ->with('guest:id,name,table_name,hall')
+                ->latest()
+                ->limit(50)
+                ->get(),
         ]);
     })->name('settings');
 
@@ -112,5 +118,4 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return redirect('/login');
 });
-
 

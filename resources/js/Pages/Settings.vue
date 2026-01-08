@@ -18,6 +18,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    scanLogs: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const resetForm = useForm({});
@@ -39,6 +43,36 @@ const regenerateQRCodes = () => {
     qrForm.post('/settings/qr/regenerate', {
         preserveScroll: true,
     });
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+    return date.toLocaleString();
+};
+
+const statusLabel = (value) => {
+    if (!value) return 'unknown';
+    return String(value).replace(/_/g, ' ');
+};
+
+const statusBadgeClass = (value) => {
+    switch (value) {
+        case 'checked_in':
+            return 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30';
+        case 'already_checked_in':
+            return 'bg-amber-500/15 text-amber-200 border border-amber-500/30';
+        case 'expired':
+        case 'invalid':
+            return 'bg-rose-500/15 text-rose-200 border border-rose-500/30';
+        case 'not_found':
+            return 'bg-orange-500/15 text-orange-200 border border-orange-500/30';
+        default:
+            return 'bg-slate-500/15 text-slate-200 border border-slate-500/30';
+    }
 };
 </script>
 
@@ -135,6 +169,55 @@ const regenerateQRCodes = () => {
                                 <span v-else>Regenerate QR Codes</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white">Scan Logs</h3>
+                            <p class="text-sm text-gray-400 mt-2">Latest QR scan attempts with status and error details.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 overflow-x-auto">
+                        <table class="table w-full text-sm">
+                            <thead>
+                                <tr class="text-gray-400">
+                                    <th class="font-medium">Time</th>
+                                    <th class="font-medium">Status</th>
+                                    <th class="font-medium">Guest</th>
+                                    <th class="font-medium">HTTP</th>
+                                    <th class="font-medium">Error</th>
+                                    <th class="font-medium">IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in props.scanLogs" :key="log.id" class="text-gray-200">
+                                    <td class="whitespace-nowrap">{{ formatDateTime(log.created_at) }}</td>
+                                    <td>
+                                        <span class="px-2 py-1 rounded-full text-xs uppercase tracking-wider"
+                                            :class="statusBadgeClass(log.status)"
+                                        >
+                                            {{ statusLabel(log.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="max-w-[12rem] truncate">
+                                        <span v-if="log.guest">{{ log.guest.name }}</span>
+                                        <span v-else-if="log.guest_id">Guest #{{ log.guest_id }}</span>
+                                        <span v-else>--</span>
+                                    </td>
+                                    <td class="text-gray-300">{{ log.http_status || '--' }}</td>
+                                    <td class="max-w-[24rem] truncate text-gray-300" :title="log.error_message || ''">
+                                        {{ log.error_message || '--' }}
+                                    </td>
+                                    <td class="text-gray-400">{{ log.ip_address || '--' }}</td>
+                                </tr>
+                                <tr v-if="!props.scanLogs.length">
+                                    <td colspan="6" class="text-center text-gray-500 py-6">No scan logs yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
