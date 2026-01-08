@@ -63,6 +63,27 @@ import { Link, Head } from '@inertiajs/vue3';
                     </div>
                 </Link>
 
+                <!-- Import Guests Card -->
+                <Link href="/guests/import" class="group relative overflow-hidden rounded-3xl bg-gray-900/40 border border-white/10 p-8 hover:bg-gray-800/40 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+                    <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-6L12 6m0 0l4.5 4.5M12 6v12" />
+                        </svg>
+                    </div>
+
+                    <div class="relative z-10">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-6 text-emerald-400 group-hover:scale-110 transition-transform duration-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-6L12 6m0 0l4.5 4.5M12 6v12" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Import Guests</h3>
+                        <p class="text-sm text-gray-400 mb-6">Upload a CSV guest list with phone, table, and hall details.</p>
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
+                            Upload CSV <span class="text-lg leading-none">&rarr;</span>
+                        </span>
+                    </div>
+                </Link>
                 <!-- Reports Card -->
                 <Link href="/reports" class="group relative overflow-hidden rounded-3xl bg-gray-900/40 border border-white/10 p-8 hover:bg-gray-800/40 transition-all duration-500 hover:border-blue-500/30 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]">
                     <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500">

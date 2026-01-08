@@ -2,7 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 
 // State
 const scanning = ref(true);
@@ -10,17 +11,19 @@ const loading = ref(false);
 const scanner = ref(null);
 const guest = ref(null);
 const errorMsg = ref('');
+const alreadyCheckedIn = ref(false);
 
 // Audio for success beep
 const successAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
 const onScanSuccess = async (decodedText, decodedResult) => {
     if (loading.value || !scanning.value) return;
-    
+
     // Pause scanning
     scanning.value = false;
     loading.value = true;
-    
+    errorMsg.value = '';
+
     try {
         // Stop the camera temporarily
         if (scanner.value) {
@@ -31,24 +34,41 @@ const onScanSuccess = async (decodedText, decodedResult) => {
         successAudio.play().catch(e => console.log('Audio play failed', e));
 
         // Call Backend to check-in
-        // Assuming the QR code contains a unique Guest ID or Token
         const response = await axios.post('/api/attendance/check-in', {
             token: decodedText
         });
 
-        guest.value = response.data.guest; // Expecting { name: '...', table: '...' }
-        
+        guest.value = response.data.guest;
+        alreadyCheckedIn.value = false;
+
         // Open the modal
         document.getElementById('guest_modal').showModal();
 
     } catch (error) {
         console.error(error);
-        errorMsg.value = "Invalid QR Code or Guest not found.";
-        scanning.value = true;
-        if(scanner.value) scanner.value.resume();
+
+        if (error.response?.status === 409) {
+            // Already checked in
+            guest.value = error.response.data.guest;
+            alreadyCheckedIn.value = true;
+            document.getElementById('guest_modal').showModal();
+        } else {
+            errorMsg.value = error.response?.data?.error || "Invalid QR Code or Guest not found.";
+            scanning.value = true;
+            if(scanner.value) scanner.value.resume();
+        }
     } finally {
         loading.value = false;
     }
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+    return date.toLocaleString();
 };
 
 const resetScanner = () => {
@@ -94,6 +114,16 @@ onUnmounted(() => {
         </div>
 
         <div class="z-10 w-full max-w-md px-6 flex flex-col items-center">
+            <!-- Back Button -->
+            <div class="w-full mb-4">
+                <Link
+                    href="/dashboard"
+                    class="btn btn-circle btn-ghost text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                    <ArrowLeftIcon class="w-6 h-6" />
+                </Link>
+            </div>
+
             <h1 class="text-3xl font-extralight tracking-[0.2em] text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500">
                 VVIP WEDDING
             </h1>
@@ -130,37 +160,73 @@ onUnmounted(() => {
 
         <!-- Result Modal -->
         <dialog id="guest_modal" class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-            <div class="modal-box bg-gray-900 border border-white/10 shadow-2xl text-center relative overflow-hidden">
-                <!-- Glow effect inside modal -->
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-yellow-500 to-purple-500"></div>
-                
-                <div v-if="guest" class="py-6">
-                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-yellow-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-black">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    
-                    <h3 class="font-bold text-2xl text-white mb-1">Welcome!</h3>
-                    <p class="text-yellow-500 text-xl font-light tracking-wide mb-6">{{ guest.name }}</p>
-                    
-                    <div class="stats shadow bg-white/5 border border-white/5">
-                        <div class="stat place-items-center">
-                            <div class="stat-title text-gray-400">Seated At</div>
-                            <div class="stat-value text-white text-3xl font-serif">Table {{ guest.table }}</div>
-                            <div class="stat-desc text-yellow-500/80">VIP Section</div>
-                        </div>
-                    </div>
+            <div class="modal-box p-0 bg-gray-900/95 border border-white/10 shadow-2xl overflow-hidden max-w-sm w-full relative">
+                <!-- Background Effects -->
+                <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                    <div class="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl"></div>
+                    <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-yellow-600/20 rounded-full blur-3xl"></div>
                 </div>
 
-                <div class="modal-action justify-center mt-8">
-                    <form method="dialog">
-                        <button @click="resetScanner" class="btn btn-wide bg-yellow-600 hover:bg-yellow-500 text-black border-none font-bold tracking-wider">
-                            SCAN NEXT
+                <div v-if="guest" class="relative z-10 flex flex-col items-center pt-10 pb-8 px-6">
+                    
+                    <!-- Status Icon with Pulse -->
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 rounded-full blur-xl opacity-50 animate-pulse" 
+                             :class="alreadyCheckedIn ? 'bg-red-500' : 'bg-yellow-400'"></div>
+                        <div class="relative w-24 h-24 rounded-full flex items-center justify-center border-4 shadow-2xl transition-all duration-500"
+                             :class="alreadyCheckedIn ? 'bg-gray-900 border-red-500/50 text-red-500' : 'bg-gray-900 border-yellow-500/50 text-yellow-400'">
+                            <CheckCircleIcon v-if="!alreadyCheckedIn" class="w-12 h-12" />
+                            <ExclamationTriangleIcon v-else class="w-12 h-12" />
+                        </div>
+                    </div>
+
+                    <!-- Text Content -->
+                    <h3 class="text-3xl font-bold text-white mb-2 tracking-tight text-center">
+                        {{ alreadyCheckedIn ? 'Already Here' : 'Welcome' }}
+                    </h3>
+                    
+                    <div class="text-center mb-8 w-full">
+                        <p class="text-xl text-gray-300 font-light truncate px-4">{{ guest.name }}</p>
+                        <p v-if="alreadyCheckedIn" class="text-xs text-red-400 mt-2 bg-red-900/30 px-3 py-1 rounded-full inline-block border border-red-500/20">
+                            Checked in: {{ formatDateTime(guest.checked_in_at) }}
+                        </p>
+                    </div>
+
+                    <!-- Seat Ticket Card -->
+                    <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-6 relative overflow-hidden group hover:bg-white/10 transition-colors">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                        
+                        <div class="flex justify-between items-end">
+                            <div class="text-left">
+                                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">Seating Table</p>
+                                <p class="text-6xl font-serif text-white font-bold tracking-tighter leading-none">
+                                    {{ guest.table || '--' }}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">Location</p>
+                                <p class="text-lg text-yellow-500 font-medium">
+                                    {{ guest.hall || 'Main Hall' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <form method="dialog" class="w-full mt-8">
+                        <button
+                            @click="resetScanner"
+                            class="btn btn-lg w-full border-none font-bold tracking-widest text-black relative overflow-hidden group shadow-lg shadow-yellow-900/20"
+                            :class="alreadyCheckedIn ? 'bg-gray-200 hover:bg-white' : 'bg-yellow-400 hover:bg-yellow-300'"
+                        >
+                            <span class="relative z-10">SCAN NEXT GUEST</span>
                         </button>
                     </form>
                 </div>
             </div>
+            <form method="dialog" class="modal-backdrop">
+                <button @click="resetScanner">close</button>
+            </form>
         </dialog>
     </div>
 </template>

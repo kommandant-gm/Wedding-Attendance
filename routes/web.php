@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\GuestImportController;
+use App\Models\Guest;
+use App\Services\QRTokenService;
 
 Route::get('/login', function () {
     return Inertia::render('Login');
@@ -31,8 +34,22 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('GuestScan');
     });
 
+    Route::get('/guests/import', [GuestImportController::class, 'create'])->name('guests.import');
+    Route::post('/guests/import', [GuestImportController::class, 'store'])->name('guests.import.store');
+
     Route::get('/attendance', function () {
-        return Inertia::render('Attendance');
+        $qrTokenService = app(QRTokenService::class);
+
+        return Inertia::render('Attendance', [
+            'guests' => Guest::query()
+                ->with('attendance')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($guest) use ($qrTokenService) {
+                    $guest->qr_token = $qrTokenService->generateToken($guest);
+                    return $guest;
+                }),
+        ]);
     });
     
     Route::get('/reports', function () {
@@ -48,3 +65,8 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return redirect('/login');
 });
+
+
+
+
+
