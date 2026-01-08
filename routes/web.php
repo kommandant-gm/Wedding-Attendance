@@ -70,6 +70,8 @@ Route::middleware('auth')->group(function () {
             'guestCount' => Guest::count(),
             'resetResult' => $request->session()->get('attendance_reset'),
             'qrResetResult' => $request->session()->get('qr_regenerated'),
+            'diagnosticsResult' => $request->session()->get('diagnostics_result'),
+            'qrTestResult' => $request->session()->get('qr_test_result'),
             'scanLogs' => ScanLog::query()
                 ->with('guest:id,name,table_name,hall')
                 ->latest()
@@ -108,6 +110,125 @@ Route::middleware('auth')->group(function () {
             'updated' => $updated,
         ]);
     })->name('settings.qr.regenerate');
+
+    Route::post('/settings/qr/test', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'token' => 'nullable|string',
+            'guest_id' => 'nullable|integer|exists:guests,id',
+        ]);
+
+        $token = isset($validated['token']) ? trim($validated['token']) : '';
+        $guestId = $validated['guest_id'] ?? null;
+        $qrTokenService = app(QRTokenService::class);
+
+        if ($token !== '') {
+            try {
+                $validatedGuestId = $qrTokenService->validateToken($token);
+                $guest = Guest::with('attendance')->findOrFail($validatedGuestId);
+
+                return back()->with('qr_test_result', [
+                    'ok' => true,
+                    'mode' => 'token',
+                    'token' => $token,
+                    'guest' => [
+                        'id' => $guest->id,
+                        'name' => $guest->name,
+                        'table' => $guest->table_name,
+                        'hall' => $guest->hall,
+                        'checked_in_at' => optional($guest->attendance)->checked_in_at,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                return back()->with('qr_test_result', [
+                    'ok' => false,
+                    'mode' => 'token',
+                    'token' => $token,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($guestId) {
+            try {
+                $guest = Guest::with('attendance')->findOrFail($guestId);
+                $generatedToken = $qrTokenService->generateToken($guest);
+
+                $validatedGuestId = $qrTokenService->validateToken($generatedToken);
+                if ($validatedGuestId !== $guest->id) {
+                    throw new Exception('Token validation returned a different guest ID');
+                }
+
+                return back()->with('qr_test_result', [
+                    'ok' => true,
+                    'mode' => 'generate',
+                    'token' => $generatedToken,
+                    'guest' => [
+                        'id' => $guest->id,
+                        'name' => $guest->name,
+                        'table' => $guest->table_name,
+                        'hall' => $guest->hall,
+                        'checked_in_at' => optional($guest->attendance)->checked_in_at,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                return back()->with('qr_test_result', [
+                    'ok' => false,
+                    'mode' => 'generate',
+                    'error' => $e->getMessage(),
+                    'guest_id' => $guestId,
+                ]);
+            }
+        }
+
+        return back()->with('qr_test_result', [
+            'ok' => false,
+            'mode' => 'none',
+            'error' => 'Provide a token or guest ID to test.',
+        ]);
+    })->name('settings.qr.test');
+
+    Route::post('/settings/diagnostics', function (Request $request) {
+        if (! $request->user() || $request->user()->username !== 'amir') {
+            abort(403);
+        }
+
+        $connection = config('database.default');
+        $details = [
+            'app_env' => config('app.env'),
+            'app_url' => config('app.url'),
+            'db_connection' => $connection,
+            'db_database' => config("database.connections.$connection.database"),
+            'db_host' => config("database.connections.$connection.host"),
+        ];
+
+        try {
+            $scanLog = ScanLog::create([
+                'status' => 'diagnostic',
+                'http_status' => 200,
+                'error_message' => 'Diagnostics test log entry',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            $details['scan_log_id'] = $scanLog->id;
+            $details['scan_logs_count'] = ScanLog::count();
+
+            return back()->with('diagnostics_result', [
+                'ok' => true,
+                'details' => $details,
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('diagnostics_result', [
+                'ok' => false,
+                'error' => $e->getMessage(),
+                'details' => $details,
+            ]);
+        }
+    })->name('settings.diagnostics');
     
     Route::post('/logout', function () {
         Auth::logout();
@@ -118,4 +239,3 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return redirect('/login');
 });
-

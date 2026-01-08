@@ -18,6 +18,14 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    diagnosticsResult: {
+        type: Object,
+        default: null,
+    },
+    qrTestResult: {
+        type: Object,
+        default: null,
+    },
     scanLogs: {
         type: Array,
         default: () => [],
@@ -41,6 +49,34 @@ const regenerateQRCodes = () => {
     if (!confirmed) return;
 
     qrForm.post('/settings/qr/regenerate', {
+        preserveScroll: true,
+    });
+};
+
+const diagnosticsForm = useForm({});
+
+const runDiagnostics = () => {
+    diagnosticsForm.post('/settings/diagnostics', {
+        preserveScroll: true,
+    });
+};
+
+const testTokenForm = useForm({
+    token: '',
+});
+
+const generateTestForm = useForm({
+    guest_id: '',
+});
+
+const testToken = () => {
+    testTokenForm.post('/settings/qr/test', {
+        preserveScroll: true,
+    });
+};
+
+const generateTokenTest = () => {
+    generateTestForm.post('/settings/qr/test', {
         preserveScroll: true,
     });
 };
@@ -168,6 +204,127 @@ const statusBadgeClass = (value) => {
                                 <span v-if="qrForm.processing" class="loading loading-spinner loading-sm"></span>
                                 <span v-else>Regenerate QR Codes</span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white">Diagnostics</h3>
+                            <p class="text-sm text-gray-400 mt-2">Create a test scan log entry and show active DB connection info.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="button"
+                                @click="runDiagnostics"
+                                :disabled="diagnosticsForm.processing"
+                                class="btn bg-slate-200 text-slate-900 hover:bg-white border-none shadow-lg shadow-slate-900/20 disabled:opacity-50"
+                            >
+                                <span v-if="diagnosticsForm.processing" class="loading loading-spinner loading-sm"></span>
+                                <span v-else>Run Diagnostics</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="props.diagnosticsResult" class="mt-6 rounded-2xl border border-white/10 bg-gray-900/60 p-4 text-sm text-gray-200">
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="inline-flex items-center rounded-full px-2 py-1 text-xs uppercase tracking-wider"
+                                :class="props.diagnosticsResult.ok ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-200 border border-rose-500/30'"
+                            >
+                                {{ props.diagnosticsResult.ok ? 'ok' : 'failed' }}
+                            </span>
+                            <span v-if="!props.diagnosticsResult.ok" class="text-rose-200">Error: {{ props.diagnosticsResult.error }}</span>
+                        </div>
+
+                        <div class="mt-4 grid gap-2 text-xs text-gray-300">
+                            <div>APP_ENV: {{ props.diagnosticsResult.details?.app_env || '--' }}</div>
+                            <div>APP_URL: {{ props.diagnosticsResult.details?.app_url || '--' }}</div>
+                            <div>DB Connection: {{ props.diagnosticsResult.details?.db_connection || '--' }}</div>
+                            <div>DB Host: {{ props.diagnosticsResult.details?.db_host || '--' }}</div>
+                            <div>DB Database: {{ props.diagnosticsResult.details?.db_database || '--' }}</div>
+                            <div>Scan Logs Count: {{ props.diagnosticsResult.details?.scan_logs_count ?? '--' }}</div>
+                            <div>Scan Log ID: {{ props.diagnosticsResult.details?.scan_log_id || '--' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 rounded-3xl bg-gray-900/40 border border-white/10 p-8">
+                    <div>
+                        <h3 class="text-xl font-semibold text-white">QR Token Tester</h3>
+                        <p class="text-sm text-gray-400 mt-2">Validate a scanned token or generate a fresh token for a guest.</p>
+                    </div>
+
+                    <div class="mt-6 grid gap-6 md:grid-cols-2">
+                        <div class="rounded-2xl border border-white/10 bg-gray-900/60 p-4">
+                            <h4 class="text-sm font-semibold text-white uppercase tracking-wider">Test Scanned Token</h4>
+                            <p class="text-xs text-gray-400 mt-2">Paste the QR token from the scan result.</p>
+                            <textarea
+                                v-model="testTokenForm.token"
+                                rows="4"
+                                class="mt-3 w-full rounded-xl bg-gray-950/70 border border-white/10 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                placeholder="Paste token here"
+                            ></textarea>
+                            <button
+                                type="button"
+                                @click="testToken"
+                                :disabled="testTokenForm.processing || !testTokenForm.token"
+                                class="mt-3 btn btn-sm bg-blue-600 hover:bg-blue-500 text-white border-none shadow-lg shadow-blue-900/20 disabled:opacity-50"
+                            >
+                                <span v-if="testTokenForm.processing" class="loading loading-spinner loading-sm"></span>
+                                <span v-else>Test Token</span>
+                            </button>
+                        </div>
+
+                        <div class="rounded-2xl border border-white/10 bg-gray-900/60 p-4">
+                            <h4 class="text-sm font-semibold text-white uppercase tracking-wider">Generate & Validate</h4>
+                            <p class="text-xs text-gray-400 mt-2">Generate a token for a guest ID and validate it.</p>
+                            <input
+                                v-model="generateTestForm.guest_id"
+                                type="number"
+                                min="1"
+                                class="mt-3 w-full rounded-xl bg-gray-950/70 border border-white/10 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                placeholder="Guest ID"
+                            />
+                            <button
+                                type="button"
+                                @click="generateTokenTest"
+                                :disabled="generateTestForm.processing || !generateTestForm.guest_id"
+                                class="mt-3 btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white border-none shadow-lg shadow-indigo-900/20 disabled:opacity-50"
+                            >
+                                <span v-if="generateTestForm.processing" class="loading loading-spinner loading-sm"></span>
+                                <span v-else>Generate Test</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="props.qrTestResult" class="mt-6 rounded-2xl border border-white/10 bg-gray-900/60 p-4 text-sm text-gray-200">
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="inline-flex items-center rounded-full px-2 py-1 text-xs uppercase tracking-wider"
+                                :class="props.qrTestResult.ok ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-200 border border-rose-500/30'"
+                            >
+                                {{ props.qrTestResult.ok ? 'ok' : 'failed' }}
+                            </span>
+                            <span class="text-xs text-gray-400">Mode: {{ props.qrTestResult.mode || '--' }}</span>
+                        </div>
+
+                        <div v-if="!props.qrTestResult.ok" class="mt-3 text-rose-200">
+                            Error: {{ props.qrTestResult.error }}
+                        </div>
+
+                        <div v-if="props.qrTestResult.guest" class="mt-4 text-xs text-gray-300">
+                            <div>Guest ID: {{ props.qrTestResult.guest.id }}</div>
+                            <div>Name: {{ props.qrTestResult.guest.name }}</div>
+                            <div>Table: {{ props.qrTestResult.guest.table || '--' }}</div>
+                            <div>Hall: {{ props.qrTestResult.guest.hall || '--' }}</div>
+                            <div>Checked In: {{ props.qrTestResult.guest.checked_in_at ? formatDateTime(props.qrTestResult.guest.checked_in_at) : 'No' }}</div>
+                        </div>
+
+                        <div v-if="props.qrTestResult.token" class="mt-4 text-xs text-gray-300">
+                            <div class="mb-2 text-gray-400">Token:</div>
+                            <pre class="whitespace-pre-wrap break-all rounded-xl bg-gray-950/70 border border-white/10 p-3 text-xs text-gray-200">{{ props.qrTestResult.token }}</pre>
                         </div>
                     </div>
                 </div>
