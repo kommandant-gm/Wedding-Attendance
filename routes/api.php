@@ -11,4 +11,5 @@ Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
 Route::middleware([EnsureFrontendRequestsAreStateful::class, 'auth:sanctum'])->group(function () {
     Route::put('/guests/{guest}', [GuestController::class, 'update']);
     Route::patch('/guests/{guest}', [GuestController::class, 'update']);
+    Route::get('/guests/{guest}/qr-token', [GuestController::class, 'qrToken']);
 });

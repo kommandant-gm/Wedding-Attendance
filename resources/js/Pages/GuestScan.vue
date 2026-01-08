@@ -109,7 +109,7 @@ const resetScanner = () => {
 };
 
 onMounted(() => {
-    const config = { fps: 10, qrbox: { width: 300, height: 300 } };
+    const config = { fps: 6, qrbox: { width: 300, height: 300 } };
     
     scanner.value = new Html5Qrcode("reader");
     
@@ -136,9 +136,9 @@ onUnmounted(() => {
     <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center relative overflow-hidden font-sans">
         <!-- Background Elements for Futuristic Feel -->
         <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-            <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-            <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-            <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+            <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+            <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-yellow-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+            <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
         </div>
 
         <div class="z-10 w-full max-w-md px-6 flex flex-col items-center">
@@ -268,14 +268,5 @@ onUnmounted(() => {
     10% { opacity: 1; }
     90% { opacity: 1; }
     100% { top: 100%; opacity: 0; }
-}
-.animate-blob {
-    animation: blob 7s infinite;
-}
-@keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
 }
 </style>

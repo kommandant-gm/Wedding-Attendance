@@ -16,6 +16,7 @@ import {
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
+import axios from 'axios';
 
 const props = defineProps({
     guests: {
@@ -31,12 +32,38 @@ const isEditModalOpen = ref(false);
 const isQRModalOpen = ref(false);
 const qrDataUrl = ref('');
 const downloadingBulk = ref(false);
+const qrError = ref('');
+const qrTokenCache = new Map();
 const editForm = ref({
     name: '',
     phone: '',
     table_name: '',
     hall: '',
 });
+
+const fetchQrToken = async (guest) => {
+    if (!guest?.id) {
+        throw new Error('Missing guest ID');
+    }
+
+    if (qrTokenCache.has(guest.id)) {
+        return qrTokenCache.get(guest.id);
+    }
+
+    try {
+        const response = await axios.get(`/api/guests/${guest.id}/qr-token`);
+        const token = response.data?.token;
+        if (!token) {
+            throw new Error('Missing QR token');
+        }
+        qrTokenCache.set(guest.id, token);
+        return token;
+    } catch (error) {
+        console.error('Failed to fetch QR token', error);
+        qrError.value = 'Unable to load QR code. Please try again.';
+        throw error;
+    }
+};
 
 const openModal = (guest) => {
     selectedGuest.value = guest;
@@ -82,13 +109,21 @@ const saveGuest = async () => {
 };
 
 const openQRModal = async (guest) => {
+    qrError.value = '';
     selectedGuest.value = guest;
-    qrDataUrl.value = await QRCode.toDataURL(guest.qr_token, {
-        width: 512,
-        margin: 2,
-        color: { dark: '#8b5cf6', light: '#ffffff' }
-    });
-    isQRModalOpen.value = true;
+
+    try {
+        const token = await fetchQrToken(guest);
+        qrDataUrl.value = await QRCode.toDataURL(token, {
+            width: 512,
+            margin: 2,
+            color: { dark: '#8b5cf6', light: '#ffffff' }
+        });
+        isQRModalOpen.value = true;
+    } catch (error) {
+        selectedGuest.value = null;
+        qrDataUrl.value = '';
+    }
 };
 
 const closeQRModal = () => {
@@ -100,34 +135,63 @@ const closeQRModal = () => {
 };
 
 const downloadQRCode = async (guest) => {
-    const canvas = document.createElement('canvas');
-    await QRCode.toCanvas(canvas, guest.qr_token, {
-        width: 512,
-        margin: 2,
-        color: { dark: '#8b5cf6', light: '#ffffff' }
-    });
-    canvas.toBlob((blob) => {
-        saveAs(blob, `${guest.name.replace(/\s+/g, '-')}-${guest.id}.png`);
-    });
-};
+    qrError.value = '';
 
-const downloadAllQRCodes = async () => {
-    downloadingBulk.value = true;
-    const zip = new JSZip();
-
-    for (const guest of props.guests) {
+    try {
+        const token = await fetchQrToken(guest);
         const canvas = document.createElement('canvas');
-        await QRCode.toCanvas(canvas, guest.qr_token, {
+        await QRCode.toCanvas(canvas, token, {
             width: 512,
             margin: 2,
             color: { dark: '#8b5cf6', light: '#ffffff' }
         });
-        const blob = await new Promise(resolve => canvas.toBlob(resolve));
-        zip.file(`${guest.name.replace(/\s+/g, '-')}-${guest.id}.png`, blob);
+        canvas.toBlob((blob) => {
+            if (blob) {
+                saveAs(blob, `${guest.name.replace(/\s+/g, '-')}-${guest.id}.png`);
+            }
+        });
+    } catch (error) {
+        // fetchQrToken handles messaging
+    }
+};
+
+const downloadAllQRCodes = async () => {
+    downloadingBulk.value = true;
+    qrError.value = '';
+    const zip = new JSZip();
+    let generatedCount = 0;
+    let failedCount = 0;
+
+    for (const guest of props.guests) {
+        try {
+            const token = await fetchQrToken(guest);
+            const canvas = document.createElement('canvas');
+            await QRCode.toCanvas(canvas, token, {
+                width: 512,
+                margin: 2,
+                color: { dark: '#8b5cf6', light: '#ffffff' }
+            });
+            const blob = await new Promise(resolve => canvas.toBlob(resolve));
+            if (!blob) {
+                failedCount++;
+                continue;
+            }
+            zip.file(`${guest.name.replace(/\s+/g, '-')}-${guest.id}.png`, blob);
+            generatedCount++;
+        } catch (error) {
+            failedCount++;
+        }
     }
 
-    const content = await zip.generateAsync({ type: 'blob' });
-    saveAs(content, `vvip-wedding-qrcodes-${Date.now()}.zip`);
+    if (generatedCount > 0) {
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, `vvip-wedding-qrcodes-${Date.now()}.zip`);
+    }
+
+    if (failedCount > 0) {
+        qrError.value = 'Some QR codes could not be generated.';
+    }
+
     downloadingBulk.value = false;
 };
 
@@ -176,6 +240,7 @@ const formatDateTime = (value) => {
                     <div>
                         <h1 class="text-3xl font-bold text-white tracking-tight">Guest Attendance</h1>
                         <p class="text-gray-400 mt-1 text-sm">Review imported guests and seating details.</p>
+                        <p v-if="qrError" class="text-sm text-red-400 mt-2">{{ qrError }}</p>
                     </div>
                 </div>
                 <div class="flex gap-3">

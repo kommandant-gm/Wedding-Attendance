@@ -43,17 +43,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/guests/import', [GuestImportController::class, 'store'])->name('guests.import.store');
 
     Route::get('/attendance', function () {
-        $qrTokenService = app(QRTokenService::class);
-
         return Inertia::render('Attendance', [
             'guests' => Guest::query()
                 ->with('attendance')
                 ->orderBy('name')
-                ->get()
-                ->map(function ($guest) use ($qrTokenService) {
-                    $guest->qr_token = $qrTokenService->generateToken($guest);
-                    return $guest;
-                }),
+                ->get(),
         ]);
     });
     

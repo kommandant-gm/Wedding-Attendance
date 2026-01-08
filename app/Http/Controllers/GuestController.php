@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Guest;
+use App\Services\QRTokenService;
 use Illuminate\Http\Request;
 
 class GuestController extends Controller
@@ -19,5 +20,13 @@ class GuestController extends Controller
         $guest->update($validated);
 
         return redirect()->back()->with('success', 'Guest updated successfully');
+    }
+
+    public function qrToken(Guest $guest, QRTokenService $qrTokenService)
+    {
+        return response()->json([
+            'guest_id' => $guest->id,
+            'token' => $qrTokenService->generateToken($guest),
+        ]);
     }
 }
